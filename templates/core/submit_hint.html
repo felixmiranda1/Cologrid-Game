@@ -1,6 +1,7 @@
-<h2>Envie a dica {{ hint_stage }}</h2>
+<h2>Envie as dicas</h2>
 <form method="POST">
   {% csrf_token %}
-  <input type="text" name="hint" required placeholder="Dica {{ hint_stage }}">
+  <input type="text" name="short_hint" required placeholder="Dica curta">
+  <input type="text" name="long_hint" required placeholder="Dica longa">
   <button type="submit">Enviar</button>
 </form>

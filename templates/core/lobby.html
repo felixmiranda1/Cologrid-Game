@@ -17,7 +17,7 @@
 
   <div class="mt-6">
     <h2 class="text-xl">Jogadores conectados:</h2>
-    <div id="players-list" hx-get="{% url 'players_list_partial' %}" hx-trigger="every 2s" hx-swap="innerHTML">
+    <div id="players-list" hx-get="{% url 'players_list_partial' %}" hx-trigger="every 5s" hx-swap="innerHTML">
       <ul>
         {% for p in players %}
           <li>{{ p.name }}</li>
@@ -26,6 +26,13 @@
     </div>
   </div>
 
+  <div 
+  id="redirect-check"
+  hx-get="{% url 'player_redirect_status' code=code %}" 
+  hx-trigger="every 5s"
+  hx-swap="outerHTML">
+</div>
+
   {% if request.session.player_id and request.session.player_id == players.0.id %}
     <!-- Só o host vê isso -->
     <form method="post" action="{% url 'start_game' %}">
@@ -33,5 +40,28 @@
       <button class="mt-6 bg-green-600 text-white px-4 py-2 rounded">Iniciar Jogo</button>
     </form>
   {% endif %}
+  <script>
+    const sessionCode = "{{ code }}";
+
+    setInterval(() => {
+      fetch(`/session/${sessionCode}/redirect_check/`)
+        .then(response => {
+          if (response.status === 200) {
+            return response.text();
+          }
+        })
+        .then(html => {
+          if (html) {
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = html;
+            const meta = tempDiv.querySelector("meta[http-equiv='refresh']");
+            if (meta) {
+              const redirectUrl = meta.content.split("URL=")[1];
+              window.location.href = redirectUrl;
+            }
+          }
+        });
+    }, 5000); // verifica a cada 5 segundos
+  </script>
 </body>
 </html>

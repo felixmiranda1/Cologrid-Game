@@ -1,0 +1,12 @@
+<h2>Submeter Jogada</h2>
+<form method="post">
+  {% csrf_token %}
+  
+  <label for="row">Linha (0 a 4):</label>
+  <input type="number" id="row" name="row" min="0" max="4" required>
+
+  <label for="col">Coluna (0 a 4):</label>
+  <input type="number" id="col" name="col" min="0" max="4" required>
+
+  <button type="submit">Enviar Jogada</button>
+</form>
