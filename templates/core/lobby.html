@@ -1,0 +1,37 @@
+<!-- core/templates/core/lobby.html -->
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <title>Sala de Espera</title>
+  <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="p-8">
+  <h1 class="text-2xl font-bold">Código da sala: {{ code }}</h1>
+
+  <div class="mt-4">
+    <p class="font-medium">Aponte a câmera para entrar:</p>
+    <!-- Placeholder para QR Code -->
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ request.build_absolute_uri }}" alt="QR Code" />
+  </div>
+
+  <div class="mt-6">
+    <h2 class="text-xl">Jogadores conectados:</h2>
+    <div id="players-list" hx-get="{% url 'players_list_partial' %}" hx-trigger="every 2s" hx-swap="innerHTML">
+      <ul>
+        {% for p in players %}
+          <li>{{ p.name }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  {% if request.session.player_id and request.session.player_id == players.0.id %}
+    <!-- Só o host vê isso -->
+    <form method="post" action="{% url 'start_game' %}">
+      {% csrf_token %}
+      <button class="mt-6 bg-green-600 text-white px-4 py-2 rounded">Iniciar Jogo</button>
+    </form>
+  {% endif %}
+</body>
+</html>

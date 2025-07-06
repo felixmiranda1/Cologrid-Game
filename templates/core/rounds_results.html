@@ -1,0 +1,20 @@
+<h2>Resultado da Rodada</h2>
+
+<p><strong>Dica curta:</strong> {{ short_hint }}</p>
+<p><strong>Dica longa:</strong> {{ long_hint }}</p>
+<p><strong>Cor-alvo:</strong> {{ target_color }}</p>
+<p><strong>Posição-alvo:</strong> Linha {{ target_position.row }}, Coluna {{ target_position.col }}</p>
+
+<h3>Pontuação da Rodada</h3>
+<ul>
+  {% for player in players_data %}
+    <li>{{ player.name }} → rodada: {{ player.round_score }} | total: {{ player.total_score }}</li>
+  {% endfor %}
+</ul>
+
+{% if is_explainer %}
+  <form action="{% url 'next_round' %}" method="post">
+    {% csrf_token %}
+    <button type="submit">Próxima Rodada</button>
+  </form>
+{% endif %}

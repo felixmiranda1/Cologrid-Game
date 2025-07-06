@@ -1,0 +1,6 @@
+<h2>Envie a dica {{ hint_stage }}</h2>
+<form method="POST">
+  {% csrf_token %}
+  <input type="text" name="hint" required placeholder="Dica {{ hint_stage }}">
+  <button type="submit">Enviar</button>
+</form>

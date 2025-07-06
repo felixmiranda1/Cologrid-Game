@@ -10,14 +10,10 @@
   <h1>Welcome to ColorGrid!</h1>
   <p>Select the game mode and enter player names:</p>
 
-  <form method="post" action="{% url 'new_game' %}">
+  <form method="post" action="{% url 'create_session' %}">
     {% csrf_token %}
     <label><input type="radio" name="mode" value="local" required> Local (TV + phones)</label><br>
     <label><input type="radio" name="mode" value="remote" required> Remote (each on their own screen)</label><br><br>
-
-    <label for="names">Player names (one per line):</label><br>
-    <textarea name="names" id="names" rows="10" cols="30" required></textarea><br><br>
-
     <button type="submit">Start Game</button>
   </form>
 </body>

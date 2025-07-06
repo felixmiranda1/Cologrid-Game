@@ -1,0 +1,83 @@
+{% load static %}
+{% load dict_extras %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Color Grid - Tabuleiro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body class="bg-gray-100 text-gray-900 p-6">
+    <div class="max-w-4xl mx-auto">
+
+        <h1 class="text-2xl font-bold mb-4">Sessão: {{ code }}</h1>
+
+        <!-- DICAS -->
+        <div class="mb-6">
+            {% if round.short_hint %}
+                <p><strong>Dica Curta:</strong> {{ round.short_hint }}</p>
+            {% endif %}
+            {% if round.long_hint %}
+                <p><strong>Dica Longa:</strong> {{ round.long_hint }}</p>
+            {% endif %}
+        </div>
+
+        <!-- GRADE DE CORES -->
+        <div class="mt-6 mb-10 flex justify-center">
+          <div>
+            <div class="grid grid-cols-6 gap-1 mb-2 ml-8">
+              <div></div>  <!-- espaço vazio no canto superior esquerdo -->
+              {% for n in NUMBERS %}
+                <div class="text-center font-bold text-sm text-gray-600">{{ n }}</div>
+              {% endfor %}
+            </div>
+            <div class="flex flex-col gap-1">
+              {% for row in LETTERS %}
+                <div class="grid grid-cols-6 gap-1 items-center">
+                  <div class="text-center font-bold text-sm text-gray-600">{{ row }}</div>
+                  {% for col in NUMBERS %}
+                    {% with key=row|add:col %}
+                      <div class="w-16 h-16 flex items-center justify-center text-xs font-bold border"
+                          style="background-color: {{ color_map|get_item:key }};">
+                        {% for move in round.moves %}
+                            {% if move.row == row and move.col == col %}
+                                {% for player in players %}
+                                    {% if player.id == move.player_id %}
+                                        {{ player.name|slice:":2"|upper }}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                      </div>
+                    {% endwith %}
+                  {% endfor %}
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        </div>
+
+        <!-- RANKING -->
+        <div class="mb-6">
+            <h2 class="text-lg font-semibold">Pontuação</h2>
+            <ul>
+                {% for player in players %}
+                    <li>{{ player.name }}: {{ player.points }} pts</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- BOTÃO PRÓXIMA RODADA -->
+        {% if request.session.device == "tv" and is_round_over %}
+            <form method="post" action="{% url 'next_round' %}">
+                {% csrf_token %}
+                <button type="submit" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
+                    Próxima Rodada
+                </button>
+            </form>
+        {% endif %}
+
+    </div>
+</body>
+</html>
