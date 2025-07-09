@@ -41,17 +41,21 @@
     hx-swap="none">
 </div>
 
-  <script>
-    document.body.addEventListener("htmx:afterRequest", (event) => {
-      const url = event.detail.pathInfo?.requestPath || event.detail.requestConfig?.url || '';
-      if (!url.includes('/redirect_check/')) return;  // só reage à URL certa
-  
-      const json = event.detail.xhr.responseJSON;
-      if (json && json.redirect_url) {
+<script>
+  document.body.addEventListener("htmx:afterOnLoad", function (event) {
+    if (!event.detail.xhr) return;
+
+    try {
+      const json = JSON.parse(event.detail.xhr.responseText);
+      if (json.redirect_url) {
         console.log("REDIRECIONANDO PARA", json.redirect_url);
         window.location.href = json.redirect_url;
       }
-    });
-  </script>
+    } catch (e) {
+      console.warn("Erro ao tentar redirecionar:", e);
+    }
+  });
+</script>
+
 </body>
 </html>

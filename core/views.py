@@ -120,6 +120,16 @@ def board(request, code):
     }
     return render(request, "core/board.html", context)
 
+def scoreboard_partial(request, code):
+    print("🔁 scoreboard_partial foi chamado!")
+    session = ACTIVE_SESSIONS.get(code)
+    if not session:
+        return HttpResponse("Sessão não encontrada", status=404)
+
+    players = session.get("players", [])
+    return render(request, "core/partials/scoreboard.html", {"players": players})
+
+
 
 # -------------------------------------------------------------
 # New multiplayer session views
@@ -358,7 +368,7 @@ def submit_move_view(request):
     elif has_long and attempt_1_done and not attempt_2_done:
         current_attempt = 2
     else:
-        return redirect("rounds_results")
+        return redirect("rounds_results", code=code)
 
     if request.method == "POST":
         try:
@@ -539,46 +549,55 @@ def waiting_hint_view(request):
 
     # Verifica se a rodada acabou e redireciona para rounds_results se necessário
     if is_round_over(session, current_round):
-        return redirect("rounds_results")
+        return redirect("rounds_results", code=code)
 
     return render(request, "core/waiting_hint.html", {"code": code})
 
 def player_redirect_status_view(request, code):
     player_id = request.session.get("player_id")
     if not player_id:
-        return JsonResponse({"redirect_url": None})  # status 200
+        return JsonResponse({"redirect_url": None})
 
     session = ACTIVE_SESSIONS.get(code)
     if not session:
-        return JsonResponse({"redirect_url": None})  # status 200
+        return JsonResponse({"redirect_url": None})
 
     if session.get("status") != "in_game":
-        return JsonResponse({"redirect_url": None})  # status 200
+        return JsonResponse({"redirect_url": None})
 
     round_number = session.get("current_round")
     current_round = next((r for r in session["rounds"] if r["round_number"] == round_number), None)
+
     if not current_round:
-        return JsonResponse({"redirect_url": None})  # status 200
+        return JsonResponse({"redirect_url": None})
 
+    explainer_id = current_round["explainer_id"]
+    player = next((p for p in session["players"] if p["id"] == player_id), None)
+    if not player:
+        return JsonResponse({"redirect_url": None})
+
+    # 👉 Caso 1: rodada acabou → todos para os resultados
     if is_round_over(session, current_round):
-        if current_round.get("short_hint") and current_round.get("long_hint"):
-            try:
-                redirect_url = reverse("rounds_results", args=[code])
-            except NoReverseMatch:
-                return JsonResponse({"redirect_url": None})
-        else:
-            return JsonResponse({"redirect_url": None})
-    else:
-        explainer_id = current_round["explainer_id"]
-        player = next((p for p in session["players"] if p["id"] == player_id), None)
-        if not player:
-            return JsonResponse({"redirect_url": None})
+        redirect_url = reverse("rounds_results", args=[code])
+        return JsonResponse({"redirect_url": redirect_url})
 
+    # 👉 Caso 2: explicador ainda não deu as dicas → todos esperam
+    if not current_round.get("short_hint") or not current_round.get("long_hint"):
         if player["id"] == explainer_id:
             redirect_url = reverse("submit_hint", args=[code])
         elif player.get("is_host"):
             redirect_url = reverse("board", args=[code])
         else:
             redirect_url = reverse("waiting_hint")
+        return JsonResponse({"redirect_url": redirect_url})
+
+    # 👉 Caso 3: dicas já foram dadas → jogadores enviam palpites
+    if player["id"] == explainer_id:
+        redirect_url = reverse("waiting_hint")
+    elif player.get("is_host"):
+        redirect_url = reverse("board", args=[code])
+    else:
+        redirect_url = reverse("submit_move")  # jogadores enviam palpite
 
     return JsonResponse({"redirect_url": redirect_url})
+

@@ -1,0 +1,8 @@
+<h2 class="text-lg font-semibold">Pontuação</h2>
+<ul>
+  {% for player in players %}
+    {% if not player.is_host %}
+      <li>{{ player.name }}: {{ player.points }} pts</li>
+    {% endif %}
+  {% endfor %}
+</ul>

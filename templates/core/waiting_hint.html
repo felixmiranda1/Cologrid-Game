@@ -13,25 +13,28 @@
         <p class="text-lg">Os jogadores estao dando seus palpites.</p>
         <div 
             id="status-check"
-            hx-get="{% url 'verifica_status_rodada' code %}" 
+            hx-get="{% url 'player_redirect_status' code %}" 
             hx-trigger="every 2s"
             hx-swap="none"
-            hx-on::after-request="handleRedirect(event)"
             class="text-sm mt-2 text-gray-600">
             Esta página será atualizada automaticamente.
         </div>
     </div>
-<script>
-  function handleRedirect(event) {
-    try {
-      const json = JSON.parse(event.detail.xhr.response);
-      if (json.redirect_url) {
-        window.location.href = json.redirect_url;
-      }
-    } catch (e) {
-      // resposta não era JSON, ignore
-    }
-  }
-</script>
+    <script>
+      document.body.addEventListener("htmx:afterOnLoad", function (event) {
+        try {
+          const jsonText = event.detail.xhr.responseText;
+          const data = JSON.parse(jsonText);
+    
+          if (data.redirect_url && data.redirect_url !== window.location.pathname) {
+            console.log("🔁 Redirecionando para:", data.redirect_url);
+            window.location.href = data.redirect_url;
+          }
+        } catch (err) {
+          // Resposta não era JSON válido → ignorar
+        }
+      });
+    </script>    
+  
 </body>
 </html>

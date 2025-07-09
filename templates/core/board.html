@@ -6,6 +6,7 @@
     <title>Color Grid - Tabuleiro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
 </head>
 <body class="bg-gray-100 text-gray-900 p-6">
     <div class="max-w-4xl mx-auto">
@@ -58,25 +59,17 @@
         </div>
         </div>
 
-        <!-- RANKING -->
-        <div class="mb-6">
-            <h2 class="text-lg font-semibold">Pontuação</h2>
-            <ul>
-                {% for player in players %}
-                    <li>{{ player.name }}: {{ player.points }} pts</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <!-- BOTÃO PRÓXIMA RODADA -->
-        {% if request.session.device == "tv" and is_round_over %}
-            <form method="post" action="{% url 'next_round' %}">
-                {% csrf_token %}
-                <button type="submit" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-                    Próxima Rodada
-                </button>
-            </form>
-        {% endif %}
+        <!-- RANKING com HTMX -->
+        <div 
+        id="scoreboard"
+        hx-get="{% url 'scoreboard_partial' code=code %}" 
+        hx-trigger="load, every 5s"
+        hx-swap="innerHTML"
+        class="mb-6">
+        <h2 class="text-lg font-semibold">Pontuação</h2>
+        <p class="text-sm text-gray-500">Carregando placar...</p>
+      </div>
+      
 
     </div>
 

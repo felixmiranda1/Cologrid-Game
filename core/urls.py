@@ -10,6 +10,7 @@ urlpatterns = [
     path('session/create/', views.create_session_view, name='create_session'),
     path('session/join/<str:code>/', views.join_session_view, name='join_session'),
     path("session/<str:code>/redirect_check/", views.player_redirect_status_view, name="player_redirect_status"),
+    path("session/<code>/scoreboard/", views.scoreboard_partial, name="scoreboard_partial"),
     path("session/submit_move/", views.submit_move_view, name="submit_move"),
     path('session/<str:session_code>/submit_hint/', views.submit_hint_view, name='submit_hint'),
     path('session/lobby/', views.lobby_view, name='lobby'),
