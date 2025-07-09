@@ -1,6 +1,8 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.urls.exceptions import NoReverseMatch
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from .models import GameSession, Player
@@ -51,7 +53,10 @@ def rotate_explainer(players, previous_explainer_id=None):
 
 def is_round_over(session, current_round):
     explainer_id = current_round["explainer_id"]
-    expected_players = [p["id"] for p in session["players"] if p["id"] != explainer_id]
+    expected_players = [
+        p["id"] for p in session["players"]
+        if p["id"] != explainer_id and not p.get("is_host")
+    ]
     moves = current_round.get("moves", [])
 
     players_with_two_moves = {
@@ -308,13 +313,14 @@ def submit_hint_view(request, session_code):
 
         current_round["short_hint"] = short_hint
         current_round["long_hint"] = long_hint
-        print('AAAAAAAAAAA')
+
         return redirect("waiting_hint")
-    print('BBBBBBBBBBBBBBBB')
+
     return render(request, "core/submit_hint.html", {
         "code": code,
         "short_hint": current_round.get("short_hint", ""),
-        "long_hint": current_round.get("long_hint", "")
+        "long_hint": current_round.get("long_hint", ""),
+        "target_color": current_round.get("target_color", "")
     })
 
 
@@ -352,12 +358,14 @@ def submit_move_view(request):
     elif has_long and attempt_1_done and not attempt_2_done:
         current_attempt = 2
     else:
-        return redirect("round_results")
+        return redirect("rounds_results")
 
     if request.method == "POST":
         try:
-            guess_row = int(request.POST.get("row"))
+            guess_row_letter = request.POST.get("row")
+            guess_row = ["A", "B", "C", "D", "E"].index(guess_row_letter)
             guess_col = int(request.POST.get("col"))
+            guess_col -= 1  # Adjust to zero-based index
         except (TypeError, ValueError):
             return HttpResponse("Coordenadas inválidas.", status=400)
 
@@ -411,8 +419,7 @@ def submit_move_view(request):
         "grid_size": session.get("grid_size", 5)
     })
 
-def round_results_view(request):
-    code = request.session.get("code")
+def rounds_results_view(request, code):
     session = ACTIVE_SESSIONS.get(code)
     if not session:
         return HttpResponse("Sessão não encontrada", status=404)
@@ -432,24 +439,34 @@ def round_results_view(request):
     players_data = []
     for player in session["players"]:
         player_moves = [m for m in current_round["moves"] if m["player_id"] == player["id"]]
-        total_score = sum(m["score"] for m in player_moves)
+        round_score = sum(m["score"] for m in player_moves)
+        if not current_round.get("scored", False):
+            player["points"] = player.get("points", 0) + round_score
         players_data.append({
             "name": player["name"],
-            "round_score": total_score,
-            "total_score": player.get("points", 0),
+            "round_score": round_score,
+            "total_score": player["points"],
         })
+    current_round["scored"] = True
 
+    target_position = current_round["target_position"]
+    row_index = target_position["row"]
+    row_letter = chr(ord("A") + row_index)
+    col_index = target_position["col"]
     context = {
         "code": code,
         "target_color": current_round["target_color"],
-        "target_position": current_round["target_position"],
+        "target_position": {
+            "row": row_letter,
+            "col": col_index + 1,
+        },
         "short_hint": current_round.get("short_hint", ""),
         "long_hint": current_round.get("long_hint", ""),
         "players_data": players_data,
         "is_explainer": is_explainer,
     }
 
-    return render(request, "core/round_results.html", context)
+    return render(request, "core/rounds_results.html", context)
 
 def next_round_view(request):
     code = request.session.get("code")
@@ -491,7 +508,14 @@ def next_round_view(request):
     session["current_round"] = current_round_number + 1
     session["rounds"].append(new_round)
 
-    return redirect("board", code=code)
+    player_id = request.session.get("player_id")
+
+    if player_id == next_explainer_id:
+        return redirect("submit_hint", session_code=code)
+    elif any(p["id"] == player_id and p.get("is_host") for p in session["players"]):
+        return redirect("board", code=code)
+    else:
+        return redirect("waiting_hint")
 
 
 # --- NOVA VIEW: waiting_hint_view ---
@@ -513,41 +537,48 @@ def waiting_hint_view(request):
         if current_round.get("short_hint") and current_round.get("long_hint"):
             return redirect("submit_move")
 
-    # Verifica se a rodada acabou e redireciona para round_results se necessário
+    # Verifica se a rodada acabou e redireciona para rounds_results se necessário
     if is_round_over(session, current_round):
-        return redirect("round_results")
+        return redirect("rounds_results")
 
     return render(request, "core/waiting_hint.html", {"code": code})
 
 def player_redirect_status_view(request, code):
     player_id = request.session.get("player_id")
     if not player_id:
-        return HttpResponseForbidden("Sem jogador identificado.")
+        return JsonResponse({"redirect_url": None})  # status 200
 
     session = ACTIVE_SESSIONS.get(code)
     if not session:
-        return HttpResponse(status=404)
+        return JsonResponse({"redirect_url": None})  # status 200
 
     if session.get("status") != "in_game":
-        return HttpResponse(status=204)
+        return JsonResponse({"redirect_url": None})  # status 200
 
-    # Se o jogo já começou, define para onde redirecionar o jogador
     round_number = session.get("current_round")
     current_round = next((r for r in session["rounds"] if r["round_number"] == round_number), None)
     if not current_round:
-        return HttpResponse(status=404)
+        return JsonResponse({"redirect_url": None})  # status 200
 
-    explainer_id = current_round["explainer_id"]
-
-    player = next((p for p in session["players"] if p["id"] == player_id), None)
-    if not player:
-        return HttpResponseForbidden("Jogador inválido.")
-
-    if player["id"] == explainer_id:
-        redirect_url = reverse("submit_hint", args=[code])
-    elif player.get("is_host"):
-        redirect_url = reverse("waiting_hint")
+    if is_round_over(session, current_round):
+        if current_round.get("short_hint") and current_round.get("long_hint"):
+            try:
+                redirect_url = reverse("rounds_results", args=[code])
+            except NoReverseMatch:
+                return JsonResponse({"redirect_url": None})
+        else:
+            return JsonResponse({"redirect_url": None})
     else:
-        redirect_url = reverse("waiting_hint")
+        explainer_id = current_round["explainer_id"]
+        player = next((p for p in session["players"] if p["id"] == player_id), None)
+        if not player:
+            return JsonResponse({"redirect_url": None})
 
-    return HttpResponse(f'<meta http-equiv="refresh" content="0; URL={redirect_url}" />')
+        if player["id"] == explainer_id:
+            redirect_url = reverse("submit_hint", args=[code])
+        elif player.get("is_host"):
+            redirect_url = reverse("board", args=[code])
+        else:
+            redirect_url = reverse("waiting_hint")
+
+    return JsonResponse({"redirect_url": redirect_url})

@@ -1,3 +1,8 @@
+<div style="margin-bottom: 1em;">
+  <strong>Cor-alvo:</strong>
+  <div style="width: 100px; height: 100px; background-color: {{ target_color }}; border: 1px solid #000;"></div>
+  <p style="margin-top: 0.5em;">Código: {{ target_color }}</p>
+</div>
 <h2>Envie as dicas</h2>
 <form method="POST">
   {% csrf_token %}
@@ -5,3 +10,24 @@
   <input type="text" name="long_hint" required placeholder="Dica longa">
   <button type="submit">Enviar</button>
 </form>
+
+<div 
+  hx-get="{% url 'player_redirect_status' code %}" 
+  hx-trigger="every 3s" 
+  hx-swap="none" 
+  hx-on::after-request="handleRedirect(event)" 
+  style="display:none;">
+</div>
+
+<script>
+  function handleRedirect(event) {
+    try {
+      const json = JSON.parse(event.detail.xhr.response);
+      if (json.redirect_url) {
+        window.location.href = json.redirect_url;
+      }
+    } catch (e) {
+      // resposta não era JSON, ignore
+    }
+  }
+</script>

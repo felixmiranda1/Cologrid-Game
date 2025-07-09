@@ -2,11 +2,32 @@
 <form method="post">
   {% csrf_token %}
   
-  <label for="row">Linha (0 a 4):</label>
-  <input type="number" id="row" name="row" min="0" max="4" required>
+  <label for="row">Linha (A a E):</label>
+  <input type="text" id="row" name="row" min="0" max="4" required>
 
-  <label for="col">Coluna (0 a 4):</label>
+  <label for="col">Coluna (1 a 5):</label>
   <input type="number" id="col" name="col" min="0" max="4" required>
 
   <button type="submit">Enviar Jogada</button>
 </form>
+
+<div 
+  hx-get="{% url 'player_redirect_status' code %}" 
+  hx-trigger="every 3s" 
+  hx-swap="none" 
+  hx-on::after-request="handleRedirect(event)" 
+  style="display:none;">
+</div>
+
+<script>
+  function handleRedirect(event) {
+    try {
+      const json = JSON.parse(event.detail.xhr.response);
+      if (json.redirect_url) {
+        window.location.href = json.redirect_url;
+      }
+    } catch (e) {
+      // resposta não era JSON, ignore
+    }
+  }
+</script>

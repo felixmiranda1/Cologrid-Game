@@ -1,4 +1,3 @@
-<!-- core/templates/core/lobby.html -->
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -26,12 +25,6 @@
     </div>
   </div>
 
-  <div 
-  id="redirect-check"
-  hx-get="{% url 'player_redirect_status' code=code %}" 
-  hx-trigger="every 5s"
-  hx-swap="outerHTML">
-</div>
 
   {% if request.session.player_id and request.session.player_id == players.0.id %}
     <!-- Só o host vê isso -->
@@ -40,28 +33,25 @@
       <button class="mt-6 bg-green-600 text-white px-4 py-2 rounded">Iniciar Jogo</button>
     </form>
   {% endif %}
-  <script>
-    const sessionCode = "{{ code }}";
 
-    setInterval(() => {
-      fetch(`/session/${sessionCode}/redirect_check/`)
-        .then(response => {
-          if (response.status === 200) {
-            return response.text();
-          }
-        })
-        .then(html => {
-          if (html) {
-            const tempDiv = document.createElement("div");
-            tempDiv.innerHTML = html;
-            const meta = tempDiv.querySelector("meta[http-equiv='refresh']");
-            if (meta) {
-              const redirectUrl = meta.content.split("URL=")[1];
-              window.location.href = redirectUrl;
-            }
-          }
-        });
-    }, 5000); // verifica a cada 5 segundos
+  <div 
+    id="redirect-check"
+    hx-get="{% url 'player_redirect_status' code=code %}" 
+    hx-trigger="every 3s"
+    hx-swap="none">
+</div>
+
+  <script>
+    document.body.addEventListener("htmx:afterRequest", (event) => {
+      const url = event.detail.pathInfo?.requestPath || event.detail.requestConfig?.url || '';
+      if (!url.includes('/redirect_check/')) return;  // só reage à URL certa
+  
+      const json = event.detail.xhr.responseJSON;
+      if (json && json.redirect_url) {
+        console.log("REDIRECIONANDO PARA", json.redirect_url);
+        window.location.href = json.redirect_url;
+      }
+    });
   </script>
 </body>
 </html>

@@ -1,10 +1,16 @@
-<h2>Resultado da Rodada</h2>
+{% if not is_explainer %}
+  <div 
+    hx-get="{% url 'player_redirect_status' code %}" 
+    hx-trigger="every 3s" 
+    hx-swap="none" 
+    hx-on::after-request="handleRedirect(event)">
+  </div>
+{% endif %}
 
 <p><strong>Dica curta:</strong> {{ short_hint }}</p>
 <p><strong>Dica longa:</strong> {{ long_hint }}</p>
 <p><strong>Cor-alvo:</strong> {{ target_color }}</p>
 <p><strong>Posição-alvo:</strong> Linha {{ target_position.row }}, Coluna {{ target_position.col }}</p>
-
 <h3>Pontuação da Rodada</h3>
 <ul>
   {% for player in players_data %}
@@ -18,3 +24,15 @@
     <button type="submit">Próxima Rodada</button>
   </form>
 {% endif %}
+<script>
+  function handleRedirect(event) {
+    try {
+      const json = JSON.parse(event.detail.xhr.response);
+      if (json.redirect_url) {
+        window.location.href = json.redirect_url;
+      }
+    } catch (e) {
+      // resposta não era JSON, ignore
+    }
+  }
+</script>

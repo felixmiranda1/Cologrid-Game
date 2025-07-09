@@ -16,6 +16,6 @@ urlpatterns = [
     path('session/lobby/players/', views.players_list_partial, name='players_list_partial'),
     path('session/start/', views.start_game_view, name='start_game'),
     path('session/waiting_hint/', views.waiting_hint_view, name='waiting_hint'),
-    path("session/results/", views.round_results_view, name="round_results"),
+    path("session/<str:code>/results/", views.rounds_results_view, name="rounds_results"),
     path("session/next/", views.next_round_view, name="next_round"),
 ]
